@@ -1,3 +1,4 @@
+```
 Use example:  
     reader -f String -p this/path -s  
     -f => find  
@@ -9,3 +10,4 @@ Use example:
     -h => help  
         (-h / --help) prints a cool help message.  
         Thx to https://github.com/tailhook for the argparser (https://github.com/tailhook/rust-argparse)
+```
