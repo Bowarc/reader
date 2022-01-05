@@ -72,7 +72,7 @@ impl Options {
 
 #[derive(Default, Debug)]
 struct File {
-    path: String, // pathbuf ?
+    path: String,
     times: i32,
 }
 
@@ -102,13 +102,6 @@ impl Output {
         }
     }
     fn display(&self, options: Options) -> String {
-        // print("\n\n============================================================")
-        // for i in ll.filefound:
-        //     print(i)
-        // print("Il y as {} fichiers contennant le mot clé '{}'".format(
-        //     len(ll.filefound), ll.SearchedSentence))
-        // print("============================================================")
-
         let line_size = 60;
 
         let mut msg = String::new();
@@ -221,25 +214,24 @@ fn search_file(options: Options) -> Output {
         );
     }
 
-    // Read the file and update the file var according to it
     match fs::read_to_string(options.path.clone()) {
         Ok(content) => {
             if options.find {
                 let list: Vec<(usize, &str)> =
                     content.match_indices(&options.str_to_find).collect();
                 let number_of_occurences = list.len();
-                // let list_of_indexes: Vec<usize> =
-                //     list.into_iter().map(|occurence| occurence.0).collect();
                 file.times = number_of_occurences as i32
             }
         }
         Err(e) => {
-            let msg = format!(
-                "Got an error reading the file: {}\nError: {}",
-                options.path.clone(),
-                e
-            );
-            println!("{}", msg.red())
+            if !options.silent {
+                let msg = format!(
+                    "Got an error reading the file: {}\nError: {}",
+                    options.path.clone(),
+                    e
+                );
+                println!("{}", msg.red())
+            }
         }
     }
 
