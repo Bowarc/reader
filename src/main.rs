@@ -1,12 +1,13 @@
 use argparse::{ArgumentParser, Store, StoreTrue};
 use colored::Colorize;
 use std::{fs, path::PathBuf};
+use termsize;
 
 const HANDLED_EXTENSIONS: &'static [&'static str] = &[
-    "txt", "py", "pyw", "c", "cpp", "rs", "bat", "cmd", "toml", "md", "log",
+    "txt", "py", "pyw", "c", "cpp", "rs", "bat", "cmd", "toml", "md", "log", "cs",
 ];
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 struct Options {
     silent: bool,
     path: String,
@@ -25,7 +26,14 @@ impl Options {
                     .to_string();
                 p[4..p.len()].to_string()
             }
-            _ => self.path.clone(),
+            _ => {
+                let p: String = PathBuf::from(self.path.clone())
+                    .canonicalize()
+                    .unwrap()
+                    .display()
+                    .to_string();
+                p[4..p.len()].to_string()
+            }
         };
         if self.path == "" {
             let mut p: String = PathBuf::from(".")
@@ -69,6 +77,16 @@ impl Options {
         new
     }
 }
+impl Default for Options {
+    fn default() -> Self {
+        Self {
+            silent: false,
+            path: ".".to_string(),
+            find: false,
+            str_to_find: "".to_string(),
+        }
+    }
+}
 
 #[derive(Default, Debug)]
 struct File {
@@ -102,12 +120,14 @@ impl Output {
         }
     }
     fn display(&self, options: Options) -> String {
-        let line_size = 60;
+        let termsize::Size { rows: _, cols } = termsize::get().unwrap();
+
+        let line_size: u16 = cols;
 
         let mut msg = String::new();
         let mut total_times = 0;
 
-        msg.push_str(&"=".repeat(line_size));
+        msg.push_str(&"=".repeat(line_size.into()));
         for file in self.positively_searched_files.iter() {
             // times = file.times:
             total_times += file.times;
@@ -129,17 +149,29 @@ impl Output {
             msg = format!("{}\n{}", msg, file_msg)
         }
         msg.push_str("\n");
-        msg.push_str(&"=".repeat(line_size));
+        msg.push_str(&"=".repeat(line_size.into()));
         if options.find {
             msg = format!(
                 "{}\n{}",
                 msg,
-                format!(
-                    "Keyword: '{}' found {} times in {} files",
-                    options.str_to_find,
-                    total_times,
-                    self.positively_searched_files.len()
-                )
+                match total_times > 1 {
+                    true => {
+                        format!(
+                            "Keyword: '{}' found {} times in {} files",
+                            options.str_to_find,
+                            total_times,
+                            self.positively_searched_files.len()
+                        )
+                    }
+                    false => {
+                        format!(
+                            "Keyword: '{}' found {} time in {} files",
+                            options.str_to_find,
+                            total_times,
+                            self.positively_searched_files.len()
+                        )
+                    }
+                }
             )
         }
 
@@ -179,11 +211,9 @@ fn search_folder(options: Options) -> Output {
                         None => "",
                     };
                     if HANDLED_EXTENSIONS.contains(&extension) {
-                        output.update(search_file(options.clone_but_change_path(format!(
-                            "{}\\{}",
-                            options.path.clone(),
-                            entry.path().file_name().unwrap().to_str().unwrap()
-                        ))));
+                        output.update(search_file(options.clone_but_change_path(
+                            entry.path().into_os_string().into_string().unwrap(),
+                        )));
                     } else {
                         if !options.silent {
                             println!(
@@ -276,14 +306,18 @@ fn main() {
         ap.parse_args_or_exit();
     }
 
-    options.update();
-    println!("{}", options.show());
-
     if !std::path::Path::new(&options.path).exists() {
         let msg = "Please input a correct path".red();
         println!("{}", msg);
         std::process::exit(1)
     }
+    options.update();
+    println!("{}", options.show());
 
-    println!("{}", search(options.clone()).display(options));
+    if options.find {
+        let t1 = std::time::SystemTime::now();
+        println!("{}", search(options.clone()).display(options));
+        let elapsed = t1.elapsed().unwrap();
+        println!("  The search took {}ms", elapsed.as_millis())
+    }
 }
