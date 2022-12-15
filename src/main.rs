@@ -4,7 +4,8 @@ use std::{fs, path::PathBuf};
 use termsize;
 
 const HANDLED_EXTENSIONS: &'static [&'static str] = &[
-    "txt", "py", "pyw", "c", "cpp", "rs", "bat", "cmd", "toml", "md", "log", "cs",
+    "txt", "py", "pyw", "c", "cpp", "rs", "bat", "cmd", "toml", "md", "log", "cs", "html", "css",
+    "js", "ps1",
 ];
 
 #[derive(Clone)]
